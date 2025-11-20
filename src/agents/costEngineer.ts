@@ -31,40 +31,49 @@ Your goal is to generate accurate quotes based on the user's requests.
 - All currency is USD.
 `;
 
-// 4. Función auxiliar: "Node" para asegurar que exista un proyecto (Autocorrección)
-// Si el estado no tiene proyecto, crea uno "Borrador" automáticamente.
+// 4. Nodo Ensure Project (AHORA INYECTA EL ID COMO MENSAJE)
 async function ensureProjectNode(state: typeof AgentState.State) {
-    if (state.activeProjectId && state.activeProjectId !== "no-project-id") {
-        return {}; // Ya tenemos proyecto, no hacemos nada
-    }
+    let projectId = state.activeProjectId;
 
-    console.log("⚠️ No active project found. Creating a Draft Project automatically...");
-    
-    const { data, error } = await supabase
-        .from('projects')
-        .insert({ 
-            name: 'Draft Estimate (Auto-created)', 
-            status: 'draft',
+    if (!projectId || projectId === "no-project-id") {
+        console.log("⚠️ No active project. Creating Draft Estimate...");
+        
+        type ProjectInsert = {
+            name?: string | null;
+            status: string;
+            user_phone?: string | null;
+        };
+        
+        const newProject: ProjectInsert = { 
+            name: 'Draft Estimate (Auto)', 
+            status: 'draft', 
             user_phone: 'test-user' 
-        } as any)
-        .select('id')
-        .single();
-    
-    if (error || !data) {
-        return { messages: [new SystemMessage("SYSTEM ERROR: Could not create a project container in Supabase.")] };
+        };
+        
+        const { data, error } = await supabase
+            .from('projects')
+            .insert(newProject)
+            .select('id')
+            .single<{ id: string }>();
+        
+        if (error || !data) return { messages: [new SystemMessage("Error creating project DB.")] };
+        projectId = data.id;
     }
 
-    const projectData = data as any;
-    console.log(`✅ Created Draft Project ID: ${projectData.id}`);
-    return { activeProjectId: projectData.id };
+    // 🔥 TRUCO: Devolvemos el ID en el estado Y un mensaje explícito para el LLM
+    return { 
+        activeProjectId: projectId,
+        messages: [
+            new SystemMessage(`SYSTEM UPDATE: The ACTIVE PROJECT ID is "${projectId}". Use this UUID for all DB tools.`)
+        ]
+    };
 }
 
-// 5. Construimos el Grafo del Agente
-// Usamos createReactAgent pero le inyectamos un paso previo para validar el Proyecto
+// 5. Workflow del Agente (Simplificado)
 const costEngineerWorkflow = createReactAgent({
   llm,
   tools,
-  stateModifier: SYSTEM_PROMPT,
+  stateModifier: SYSTEM_PROMPT, // Volvemos al prompt estático, el ID viene en los mensajes
 });
 
 export { costEngineerWorkflow, ensureProjectNode };

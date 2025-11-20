@@ -20,12 +20,12 @@ async function main() {
   // El usuario pide algo vago primero, luego específico.
   const inputs = {
     messages: [
-      new HumanMessage("Hello, I need a price for a standard sidewalk, about 150 feet long."),
+      new HumanMessage("Add exactly 600 SF of 4in Sidewalk (Code: CEM-SW-4IN) to the project. No questions, just do it."),
     ],
     activeProjectId: "no-project-id" // Forzamos a que cree uno nuevo
   };
 
-  console.log("👤 User: I need a price for a standard sidewalk, about 150 feet long.");
+  console.log("👤 User: Add exactly 600 SF of 4in Sidewalk (Code: CEM-SW-4IN) to the project. No questions, just do it.");
   
   const config = { configurable: { thread_id: "test-thread-1" } };
 

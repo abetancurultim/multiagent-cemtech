@@ -1,130 +1,88 @@
-import dotenv from "dotenv";
-import { END } from "@langchain/langgraph";
-import { z } from "zod";
-import {
-  ChatPromptTemplate,
-  MessagesPlaceholder,
-} from "@langchain/core/prompts";
-import { START, StateGraph } from "@langchain/langgraph";
-import { MemorySaver } from "@langchain/langgraph";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { StateGraph, END } from "@langchain/langgraph";
+import { ChatOpenAI } from "@langchain/openai";
 import { AgentState } from "./agents/agentState";
+import { costEngineerWorkflow, ensureProjectNode } from "./agents/costEngineer";
 
-dotenv.config();
+/**
+ * 🧠 EL SUPERVISOR
+ * Analiza la intención del usuario y decide:
+ * 1. ¿Es sobre costos/cotizaciones? -> Manda al 'cost_engineer'
+ * 2. ¿Es saludo/pregunta general? -> Responde él mismo.
+ */
 
-const checkpointer = new MemorySaver();
+const supervisorModel = new ChatOpenAI({ 
+  model: "gpt-5-nano-2025-08-07",
+});
 
-const members = [
-  "sales_service",
-  "technical_service",
-  "customer_service",
-] as const;
+const SUPERVISOR_PROMPT = `You are the Lead Supervisor at Cemtech AI.
+Your goal is to route user requests to the correct specialist or answer general questions yourself.
 
-const systemPrompt = `
-Eres el supervisor de InduEquipos Andina S.A.S., empresa de maquinaria industrial para procesamiento de alimentos.
+### WORKERS:
+1. **cost_engineer**: Handles calculating prices, quotes, adding items (sidewalks, curbs, pads), or looking up materials.
 
-Tu trabajo es enrutar las consultas de los clientes al agente correcto entre los siguientes: {members}
+### ROUTING LOGIC:
+- If the user mentions "price", "quote", "estimate", "cost", "sidewalk", "concrete", "add item", or specific measurements -> RETURN JSON: { "next": "cost_engineer" }
+- If the user says "Hello", "Who are you?", or general chat -> RETURN JSON: { "next": "FINISH", "reply": "Your friendly greeting here" }
 
-**sales_service** - Para:
-- Consultas sobre productos, precios, catálogo
-- Intención de compra, cotizaciones
-- Información sobre promociones y descuentos
-- Preguntas sobre disponibilidad de productos
-- Solicitudes de información comercial
-- Palabras clave: comprar, precio, producto, amasadora, cutter, embutidora, cotización, oferta, opciones, necesito
-
-**technical_service** - Para:
-- Problemas técnicos con equipos existentes
-- Fallas, errores, reparaciones
-- Mantenimiento preventivo
-- Soporte técnico post-venta
-- Consultas sobre garantías técnicas
-- Palabras clave: no funciona, error, falla, reparar, técnico, garantía, problema, no arranca, ruido
-
-**customer_service** - Para:
-- Quejas y reclamos
-- Devoluciones
-- Problemas de facturación
-- Problemas de envío/logística
-- Atención post-venta no técnica
-- Palabras clave: queja, reclamo, devolución, factura, envío, malo, dañado
-- Brinda información general sobre la empresa, productos, servicios, etc. Es el primero en responder.
-
-Analiza el mensaje del usuario y determina qué tipo de servicio necesita.
+You must always return JSON.
 `;
 
-const options = [END, ...members];
+// Nodo del Supervisor
+async function supervisorNode(state: typeof AgentState.State) {
+  const messages = state.messages;
+  const lastMessage = messages[messages.length - 1];
 
-// Define the routing function
-const routingTool = {
-  name: "route",
-  description: "Select the next role.",
-  schema: z.object({
-    next: z.enum([END, ...members]),
-  }),
-};
+  // Pedimos al LLM que decida en formato JSON
+  const response = await supervisorModel.invoke([
+    new SystemMessage(SUPERVISOR_PROMPT),
+    lastMessage
+  ]);
 
-const prompt = ChatPromptTemplate.fromMessages([
-  ["system", systemPrompt],
-  new MessagesPlaceholder("messages"),
-  [
-    "human",
-    "Given the conversation above, who should act next?" +
-      " Or should we FINISH? Select one of: {options}",
-  ],
-]);
+  let decision;
+  try {
+    // Limpiamos el string por si el LLM mete markdown ```json ... ```
+    const cleanJson = response.content.toString().replace(/```json|```/g, '').trim();
+    decision = JSON.parse(cleanJson);
+  } catch (e) {
+    console.log("⚠️ Error parsing supervisor JSON, defaulting to cost_engineer");
+    decision = { next: "cost_engineer" };
+  }
 
-const formattedPrompt = await prompt.partial({
-  options: options.join(", "),
-  members: members.join(", "),
-});
+  if (decision.next === "cost_engineer") {
+      console.log("🔀 Supervisor: Routing to Cost Engineer");
+      return { next: "cost_engineer" };
+  }
 
-const supervisorChain = formattedPrompt
-  .pipe(
-    llm.bindTools([routingTool], {
-      tool_choice: "route",
-    })
-  )
-  // select the first one
-  // @ts-ignore
-  .pipe((x) => x.tool_calls[0].args);
+  // Si decide responder él mismo (FINISH)
+  return { 
+      next: "FINISH", 
+      messages: [new HumanMessage(decision.reply || "Hello! How can I help with your concrete project?")] 
+  };
+}
 
-// --------------------------------
-//* Explicación de código:
-// --------------------------------
-// workflow es un gráfico de estados que define el flujo de trabajo de los agentes.
-// El gráfico de estados contiene nodos que realizan tareas y bordes que conectan los nodos.
-// Los nodos son funciones que procesan mensajes y devuelven mensajes.
-// Los bordes son transiciones entre nodos que se activan cuando se cumple una condición.
-// --------------------------------
-// 1. Create the graph
+// Construcción del Grafo Maestro
 const workflow = new StateGraph(AgentState)
-  // 2. Add the nodes; these will do the work
-  .addNode("supervisor", supervisorChain, {
-    ends: ["sales_service", "technical_service", "customer_service", "__end__"],
-  })
-  .addNode("sales_service", salesServiceNode, {
-    ends: ["supervisor"],
-  })
-  .addNode("technical_service", technicalServiceNode, {
-    ends: ["supervisor"],
-  })
-  .addNode("customer_service", customerServiceNode, {
-    ends: ["supervisor"],
-  });
+  // Definimos los Nodos
+  .addNode("ensure_project", ensureProjectNode) // 1. Siempre revisamos que haya proyecto
+  .addNode("supervisor", supervisorNode)        // 2. El jefe decide
+  .addNode("cost_engineer", costEngineerWorkflow) // 3. El experto trabaja
 
-// 3. Define the edges. We will define both regular and conditional ones
-// After a worker completes, report to supervisor
-// members.forEach((member) => {
-//   workflow.addEdge(member, "supervisor");
-// });
+  // Definimos las Conexiones (Edges)
+  .addEdge("__start__", "ensure_project") 
+  .addEdge("ensure_project", "supervisor")
+  
+  // Lógica Condicional del Supervisor
+  .addConditionalEdges(
+      "supervisor", 
+      (x: any) => x.next,
+      {
+        "cost_engineer": "cost_engineer",
+        "FINISH": END
+      }
+  )
 
-workflow.addConditionalEdges(
-  "supervisor",
-  (x: typeof AgentState.State) => x.next
-);
+  // El Cost Engineer termina su turno y volvemos a END (o al supervisor en futuros ciclos)
+  .addEdge("cost_engineer", END);
 
-workflow.addEdge(START, "supervisor");
-
-export const graph = workflow.compile({
-  checkpointer,
-});
+export const graph = workflow.compile();

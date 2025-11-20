@@ -1,19 +1,18 @@
 import { BaseMessage } from "@langchain/core/messages";
 import { Annotation } from "@langchain/langgraph";
 
-/**
- * Definimos el estado global de nuestra aplicación.
- * - messages: La historia del chat.
- * - activeProjectId: El ID de la cotización actual (CRÍTICO para el Cost Engineer).
- */
 export const AgentState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
     reducer: (x, y) => x.concat(y),
     default: () => [],
   }),
-  // Agregamos este campo nuevo:
   activeProjectId: Annotation<string>({
-    reducer: (x, y) => y ?? x, // El último valor sobrescribe
+    reducer: (x, y) => y ?? x, 
     default: () => "no-project-id", 
+  }),
+  // ✅ NUEVO CAMPO: Para que el Supervisor guarde a dónde ir
+  next: Annotation<string>({
+    reducer: (x, y) => y ?? x,
+    default: () => "FINISH",
   }),
 });
