@@ -1,215 +1,159 @@
-# Herramientas de Agentes - InduEquipos Andina S.A.S.
 
-## Descripción General
+# 🏗️ Cemtech AI Cost Engine
 
-Esta carpeta contiene todas las herramientas especializadas para los agentes del sistema multiagente de InduEquipos Andina S.A.S. Cada agente tiene herramientas específicas para su área de trabajo, siguiendo las mejores prácticas de [LangChain Tools](https://js.langchain.com/docs/concepts/tools/).
+> **Multi-Agent System for Automated Concrete Quoting via WhatsApp.**
 
-## Estructura de Archivos
+This project is a vertical tool for **Cemtech** (Atlanta, GA) designed to automate the quoting process (Takeoff & Estimating) through an intelligent conversational interface.
 
-```
-src/tools/
-├── index.ts             # Archivo principal con todas las exportaciones
-├── salesTools.ts        # Herramientas específicas del agente de ventas
-├── technicalTools.ts    # Herramientas específicas del agente técnico
-├── customerTools.ts     # Herramientas específicas del servicio al cliente
-├── tools.ts             # Herramientas generales (legacy)
-└── README.md           # Este archivo
-```
+---
 
-## Agentes y sus Herramientas
+## 📖 Project Context
 
-### 🏢 Agente de Ventas (Valentina Ríos)
+The goal is to reduce the time sales engineers spend processing manual requests. The system enables:
 
-**Archivo:** `salesTools.ts`
 
-- **`getProductCatalogTool`** - Obtiene catálogo de productos con filtros
-- **`calculateQuoteTool`** - Calcula cotizaciones detalladas con descuentos
-- **`getSalesAnalyticsTool`** - Proporciona análisis de ventas y tendencias
-- **`getActivePromotionsTool`** - Obtiene promociones activas
-- **`checkInventoryTool`** - Verifica disponibilidad de inventario
+1. **Quote via Chat:** Calculate quantities and prices through natural conversation (Text or Audio).
+2. **Hybrid Management:** Store multimedia files (Blueprints, Photos, Audios) in the cloud and structured data in a relational database.
+3. **Human Handoff:** A "traffic light" system where a human can take control of the chat, automatically pausing the AI.
 
-### 🔧 Agente Técnico (Carlos Restrepo)
 
-**Archivo:** `technicalTools.ts`
+---
 
-- **`diagnoseTechnicalIssueTool`** - Diagnostica problemas técnicos
-- **`scheduleTechnicalVisitTool`** - Programa visitas técnicas
-- **`getTechnicalManualTool`** - Obtiene manuales técnicos
-- **`checkWarrantyStatusTool`** - Verifica estado de garantía
-- **`schedulePreventiveMaintenanceTool`** - Programa mantenimiento preventivo
+## 🛠️ Technology Stack (Hybrid Architecture)
 
-### 🎧 Agente de Servicio al Cliente (María F. Ortiz)
+The system uses a robust and scalable architecture:
 
-**Archivo:** `customerTools.ts`
+* **Runtime:** Node.js (TypeScript).
+* **AI Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/) (Supervisor-Worker Architecture with Persistence).
+* **LLM:** OpenAI (GPT-4o for reasoning, Whisper-1 for audio transcription).
+* **Database (Data):** [Supabase](https://supabase.com/) (PostgreSQL) - User management, chat history, projects, and price catalog.
+* **Storage (Files):** [Firebase Storage](https://firebase.google.com/) - Receiving and hosting audios, images, and PDFs from WhatsApp.
+* **Channel:** WhatsApp Business API (via **Twilio**).
 
-- **`searchFAQTool`** - Busca en preguntas frecuentes
-- **`trackOrderTool`** - Rastrea órdenes de clientes
-- **`manageComplaintTool`** - Gestiona reclamos
-- **`getCompanyInfoTool`** - Obtiene información de la empresa
-- **`scheduleFollowUpTool`** - Programa llamadas de seguimiento
-- **`validateCityTool`** - Valida cobertura de ciudad
-- **`contactServiceTool`** - Obtiene información de contacto
+---
 
-## Uso de las Herramientas
+## 🧩 System Architecture
 
-### Importación Individual
+The information flow follows a strict pattern to ensure integrity and traceability:
 
-```typescript
-import { getProductCatalogTool } from "../tools/salesTools";
-import { diagnoseTechnicalIssueTool } from "../tools/technicalTools";
-import { searchFAQTool } from "../tools/customerTools";
-```
 
-### Importación por Agente
+### 1. Messaging Flow
 
-```typescript
-import { salesTools, technicalTools, customerTools } from "../tools";
-```
+1. **Input:** User sends a message (Text/Audio/Image) to WhatsApp.
+2. **Webhook:** Twilio forwards the event to our server (`/whatsapp/webhook`).
+3. **Media Handler:**
+    * If there are files, they are downloaded from Twilio and uploaded to **Firebase Storage**.
+    * If it is Audio, it is transcribed to text using **OpenAI Whisper**.
+4. **Persistence:** The message is saved in **Supabase** (`messages` and `chat_history`).
 
-### Importación de Todas las Herramientas
+### 2. Control Logic (Human Handoff)
 
-```typescript
-import { allTools, allToolsArray } from "../tools";
-```
+Before activating the AI, the system checks the `chat_on` flag in the `chat_history` table in Supabase:
 
-### Uso con Funciones Utilitarias
+* 🔴 **`chat_on = true`:** A human is attending. The AI does **NOT** run.
+* 🟢 **`chat_on = false`:** The AI processes the message and responds.
 
-```typescript
-import { getToolsByAgent, getToolsByAgentName } from "../tools";
+### 3. AI Graph (LangGraph)
 
-// Por tipo de agente
-const salesTools = getToolsByAgent("sales");
-const technicalTools = getToolsByAgent("technical");
-const customerTools = getToolsByAgent("customer");
+If the AI is active, the **Supervisor Agent** routes the intent:
 
-// Por nombre de agente
-const valentinaTools = getToolsByAgentName("valentina");
-const carlosTools = getToolsByAgentName("carlos");
-const mariaTools = getToolsByAgentName("maria");
-```
+* 👷 **Cost Engineer:** Expert agent in calculations. Uses tools (`lookup_item`, `add_quote_item`) to interact with the price database.
+* (Future) **Blueprint Analyst:** Vision agent to read blueprints.
+* (Future) **PDF Generator:** Agent to render deliverables.
 
-## Características de las Herramientas
+---
 
-### Esquemas con Zod
+## 📂 Project Structure
 
-Todas las herramientas utilizan esquemas de validación con Zod:
-
-```typescript
-schema: z.object({
-  productId: z.string().min(1).describe("ID del producto"),
-  quantity: z.number().int().min(1).describe("Cantidad"),
-  customerType: z.enum(["nuevo", "recurrente", "empresarial"]).optional(),
-});
+```bash
+src/
+├── agents/           # Agent definitions (Graph Nodes)
+│   ├── costEngineer.ts    # Quoting logic
+│   └── agentState.ts      # Global graph state interface
+├── config/           # Service configuration
+│   ├── firebase.ts        # Firebase Storage initialization
+│   ├── supabase.ts        # Database client
+│   └── llm.ts             # OpenAI configuration
+├── routes/           # API Endpoints
+│   └── chatRoutes.ts      # Main Twilio webhook
+├── services/         # Data layer
+│   └── chatHistoryService.ts # CRUD abstraction for Supabase
+├── tools/            # Tools (Function Calling)
+│   ├── costTools.ts       # Search and Quoting tools
+│   └── ...
+├── utils/            # Utilities
+│   └── mediaHandler.ts    # Pipeline: Twilio -> Firebase -> Whisper
+├── supervisor.ts     # Graph and Router configuration
+└── index.ts          # Server entry point
 ```
 
-### Descripciones Detalladas
+---
 
-Cada herramienta tiene descripciones claras para que el modelo LLM pueda entenderlas:
+## 🚀 Installation and Setup
 
-```typescript
-description: "Calcula una cotización detallada para productos específicos con descuentos automáticos según tipo de cliente y cantidad.";
+### 1. Clone and Install
+
+```bash
+git clone <repo-url>
+cd multiagent-cemtech
+npm install
 ```
 
-### Parámetros Opcionales
+### 2. Environment Variables
 
-Uso de valores por defecto y parámetros opcionales:
+Create a `.env` file at the root with the following credentials:
 
-```typescript
-urgency: z.enum(["baja", "media", "alta", "critica"])
-  .optional()
-  .default("media");
+```env
+PORT=3031
+
+# --- AI ---
+OPENAI_API_KEY="sk-..."
+
+# --- Database (Supabase) ---
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_SERVICE_KEY="your-service-role-key" # Needed to bypass RLS if applicable
+
+# --- Files (Firebase) ---
+FIREBASE_API_KEY="..."
+FIREBASE_AUTH_DOMAIN="..."
+FIREBASE_PROJECT_ID="..."
+FIREBASE_STORAGE_BUCKET="..."
+FIREBASE_MESSAGING_SENDER_ID="..."
+FIREBASE_APP_ID="..."
+
+# --- Communication (Twilio) ---
+TWILIO_ACCOUNT_SID="AC..."
+TWILIO_AUTH_TOKEN="..."
+TWILIO_PHONE_NUMBER="whatsapp:+1..."
 ```
 
-## Mejores Prácticas
+### 3. Run in Development
 
-### 1. Naming Convention
+Start Server:
 
-- Los nombres de herramientas son descriptivos y específicos
-- Uso de sufijo `Tool` para diferenciación
-- Nombres de función en camelCase
-
-### 2. Validación de Entrada
-
-- Todos los parámetros tienen validación con Zod
-- Descripciones claras para cada parámetro
-- Uso de enums para valores restringidos
-
-### 3. Manejo de Errores
-
-- Las funciones subyacentes manejan errores apropiadamente
-- Validación de entrada antes de procesamiento
-- Respuestas estructuradas y consistentes
-
-### 4. Documentación
-
-- Cada herramienta tiene comentarios JSDoc
-- Parámetros documentados con `.describe()`
-- Ejemplos de uso en comentarios
-
-## Integración con Agentes
-
-### Ejemplo de Uso en Agente
-
-```typescript
-import { salesTools } from "../tools";
-
-const agentExecutor = createReactAgent({
-  llm: chatModel,
-  tools: salesTools,
-  // ... otras configuraciones
-});
+```bash
+npm run dev
 ```
 
-### Configuración Dinámica
+Expose Port (Ngrok):
 
-```typescript
-import { getToolsByAgent } from "../tools";
-
-function createAgentWithTools(agentType: "sales" | "technical" | "customer") {
-  const tools = getToolsByAgent(agentType);
-  return createReactAgent({
-    llm: chatModel,
-    tools,
-    // ... configuración específica del agente
-  });
-}
+```bash
+ngrok http 3031
 ```
 
-## Datos de Prueba
+Configure Webhook: In Twilio Console > WhatsApp Sandbox Settings, paste your Ngrok URL: `https://your-ngrok-url.app/whatsapp/webhook`
 
-Las herramientas utilizan datos simulados realistas que incluyen:
+---
 
-- **Productos industriales** por categoría (panadería, cárnicos, chocolates, etc.)
-- **Precios** y descuentos basados en volumen y tipo de cliente
-- **Técnicos especializados** por zona geográfica
-- **Órdenes de compra** con estados de seguimiento
-- **Base de conocimientos FAQ** por categoría
-- **Información de garantía** por tipo de producto
+## 💾 Data Model (SQL Supabase)
 
-## Compatibilidad
+The system requires the following main tables in Supabase:
 
-El sistema mantiene compatibilidad con herramientas legacy:
+* **chat_history:** Session control (client_number, chat_on).
+* **messages:** Chat history (sender, message, url, twilio_sid).
+* **projects:** Quotation header.
+* **project_items:** Quoted items detail.
+* **assemblies:** Catalog of sellable items.
+* **resources:** Catalog of base resources.
 
-```typescript
-// Importaciones legacy siguen funcionando
-import { contactTool, getProductInfoTool } from "../tools/tools";
-```
-
-## Extensibilidad
-
-Para agregar nuevas herramientas:
-
-1. Crear la función en el archivo `functions/` correspondiente
-2. Crear la herramienta en el archivo `tools/` del agente
-3. Agregar la exportación en `index.ts`
-4. Actualizar la documentación
-
-## Tipos TypeScript
-
-```typescript
-export type AgentType = "sales" | "technical" | "customer";
-export type AgentName = "valentina" | "carlos" | "maria";
-export type ToolType = keyof typeof allTools;
-```
-
-Esta estructura proporciona un sistema robusto, escalable y bien documentado para las herramientas de los agentes del sistema multiagente de InduEquipos Andina S.A.S.
+---

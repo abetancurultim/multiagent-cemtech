@@ -112,6 +112,72 @@ export interface Database {
         };
         Relationships: [];
       };
+      chat_history: {
+        Row: {
+          id: number;
+          created_at: string;
+          client_number: string;
+          client_name: string | null;
+          chat_on: boolean;
+          chat_status: 'open' | 'closed' | 'pending';
+          agent_name: string;
+          origin: string | null;
+        };
+        Insert: {
+          id?: number;
+          created_at?: string;
+          client_number: string;
+          client_name?: string | null;
+          chat_on?: boolean;
+          chat_status?: 'open' | 'closed' | 'pending';
+          agent_name: string;
+          origin?: string | null;
+        };
+        Update: {
+          id?: number;
+          created_at?: string;
+          client_number?: string;
+          client_name?: string | null;
+          chat_on?: boolean;
+          chat_status?: 'open' | 'closed' | 'pending';
+          agent_name?: string;
+          origin?: string | null;
+        };
+        Relationships: [];
+      };
+      messages: {
+        Row: {
+          id: number;
+          conversation_id: number;
+          sender: 'user' | 'assistant' | 'system';
+          message: string;
+          type: 'text' | 'image' | 'document' | 'audio';
+          twilio_sid: string | null;
+          status: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          conversation_id: number;
+          sender: 'user' | 'assistant' | 'system';
+          message: string;
+          type?: 'text' | 'image' | 'document' | 'audio';
+          twilio_sid?: string | null;
+          status?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          conversation_id?: number;
+          sender?: 'user' | 'assistant' | 'system';
+          message?: string;
+          type?: 'text' | 'image' | 'document' | 'audio';
+          twilio_sid?: string | null;
+          status?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {};
     Functions: {};
@@ -119,3 +185,7 @@ export interface Database {
     CompositeTypes: {};
   };
 }
+
+// Tipos auxiliares para uso en el código
+export type ChatHistory = Database['public']['Tables']['chat_history']['Row'];
+export type Message = Database['public']['Tables']['messages']['Row'];
