@@ -8,10 +8,6 @@ import {
 import { START, StateGraph } from "@langchain/langgraph";
 import { MemorySaver } from "@langchain/langgraph";
 import { AgentState } from "./agents/agentState";
-import { salesServiceNode } from "./agents/salesServiceAgent";
-import { technicalServiceNode } from "./agents/technicalServiceAgent";
-import { customerServiceNode } from "./agents/customerServiceAgent";
-import { llm } from "./config/llm";
 
 dotenv.config();
 
