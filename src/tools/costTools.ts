@@ -23,16 +23,16 @@ export const lookupItemTool = tool(
  * Tool Wrapper: Add Item
  */
 export const addQuoteItemTool = tool(
-  async ({ project_id, assembly_code, quantity }) => {
+  async ({ estimation_id, item_id, quantity }) => {
     // Llamada limpia a la lógica
-    return await calculateAndAddQuoteItem(project_id, assembly_code, quantity);
+    return await calculateAndAddQuoteItem(estimation_id, item_id, quantity);
   },
   {
     name: "add_quote_item",
-    description: "Calculates cost and adds an item to the current quote. REQUIRES valid project_id and assembly CODE.",
+    description: "Calculates cost and adds an item to the current quote. REQUIRES valid estimation_id and item_id.",
     schema: z.object({
-      project_id: z.string().uuid(),
-      assembly_code: z.string(),
+      estimation_id: z.string().uuid(),
+      item_id: z.number(),
       quantity: z.number(),
     }),
   }

@@ -2,7 +2,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { StateGraph, END } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 import { AgentState } from "./agents/agentState";
-import { costEngineerWorkflow, ensureProjectNode } from "./agents/costEngineer";
+import { costEngineerWorkflow, ensureEstimationNode } from "./agents/costEngineer";
 
 /**
  * 🧠 EL SUPERVISOR (ROUTER)
@@ -82,12 +82,12 @@ async function supervisorNode(state: typeof AgentState.State) {
 
 // Construcción del Grafo Maestro
 const workflow = new StateGraph(AgentState)
-  .addNode("ensure_project", ensureProjectNode)
+  .addNode("ensure_estimation", ensureEstimationNode)
   .addNode("supervisor", supervisorNode)
   .addNode("cost_engineer", costEngineerWorkflow)
 
-  .addEdge("__start__", "ensure_project")
-  .addEdge("ensure_project", "supervisor")
+  .addEdge("__start__", "ensure_estimation")
+  .addEdge("ensure_estimation", "supervisor")
   
   .addConditionalEdges(
       "supervisor", 

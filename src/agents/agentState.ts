@@ -10,7 +10,14 @@ export const AgentState = Annotation.Root({
     reducer: (x, y) => y ?? x, 
     default: () => "no-project-id", 
   }),
-  // ✅ NUEVO CAMPO: Para que el Supervisor guarde a dónde ir
+  activeEstimationId: Annotation<string>({
+    reducer: (x, y) => y ?? x,
+    default: () => "no-estimation-id",
+  }),
+  activeClientId: Annotation<string>({
+    reducer: (x, y) => y ?? x,
+    default: () => "no-client-id",
+  }),
   next: Annotation<string>({
     reducer: (x, y) => y ?? x,
     default: () => "FINISH",

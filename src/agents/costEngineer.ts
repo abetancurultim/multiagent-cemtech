@@ -17,12 +17,12 @@ const SYSTEM_PROMPT = `You are the Senior Cost Engineer at Cemtech, a concrete c
 Your goal is to generate accurate quotes based on the user's requests.
 
 ### CRITICAL INSTRUCTIONS:
-1. **Identify the Need**: If the user asks for "sidewalks", "pads", or "curbs", ALWAYS use 'lookup_item' first to find the correct CODE in the database.
+1. **Identify the Need**: If the user asks for "sidewalks", "pads", or "curbs", ALWAYS use 'lookup_item' first to find the correct ID in the database.
 2. **Clarify**: If the user is vague (e.g., "I need concrete"), ask for specifics (thickness, usage) based on the items you found.
-3. **Quote**: Once you have the Item Code and Quantity, use 'add_quote_item' to calculate the cost.
-4. **Project Context**: You must always have an active 'project_id'. 
+3. **Quote**: Once you have the Item ID and Quantity, use 'add_quote_item' to calculate the cost.
+4. **Estimation Context**: You must always have an active 'estimation_id'. 
    - The system will provide one in the state. 
-   - If 'add_quote_item' fails asking for a project ID, ask the user to start a new project.
+   - If 'add_quote_item' fails asking for an estimation ID, ask the user to start a new estimation.
 
 ### RULES:
 - NEVER invent prices. Always use the tools.
@@ -31,40 +31,49 @@ Your goal is to generate accurate quotes based on the user's requests.
 - All currency is USD.
 `;
 
-// 4. Nodo Ensure Project (AHORA INYECTA EL ID COMO MENSAJE)
-async function ensureProjectNode(state: typeof AgentState.State) {
-    let projectId = state.activeProjectId;
+// 4. Nodo Ensure Estimation (AHORA INYECTA EL ID COMO MENSAJE)
+async function ensureEstimationNode(state: typeof AgentState.State) {
+    let estimationId = state.activeEstimationId;
+    let clientId = state.activeClientId;
 
-    if (!projectId || projectId === "no-project-id") {
-        console.log("⚠️ No active project. Creating Draft Estimate...");
+    // 1. Ensure Client
+    if (!clientId || clientId === "no-client-id") {
+        console.log("⚠️ No active client. Creating Default Client...");
         
-        type ProjectInsert = {
-            name?: string | null;
-            status: string;
-            user_phone?: string | null;
-        };
-        
-        const newProject: ProjectInsert = { 
-            name: 'Draft Estimate (Auto)', 
-            status: 'draft', 
-            user_phone: 'test-user' 
-        };
-        
-        const { data, error } = await supabase
-            .from('projects')
-            .insert(newProject)
+        const { data: clientData, error: clientError } = await supabase
+            .from('clients')
+            .insert({ name: 'Default Client', email: 'default@example.com' } as any)
             .select('id')
             .single<{ id: string }>();
         
-        if (error || !data) return { messages: [new SystemMessage("Error creating project DB.")] };
-        projectId = data.id;
+        if (clientError || !clientData) return { messages: [new SystemMessage("Error creating client DB.")] };
+        clientId = clientData.id;
+    }
+
+    // 2. Ensure Estimation
+    if (!estimationId || estimationId === "no-estimation-id") {
+        console.log("⚠️ No active estimation. Creating Draft Estimation...");
+        
+        const { data: estData, error: estError } = await supabase
+            .from('estimations')
+            .insert({ 
+                client_id: clientId,
+                status: 'draft',
+                net_total: 0
+            } as any)
+            .select('id')
+            .single<{ id: string }>();
+        
+        if (estError || !estData) return { messages: [new SystemMessage("Error creating estimation DB.")] };
+        estimationId = estData.id;
     }
 
     // 🔥 TRUCO: Devolvemos el ID en el estado Y un mensaje explícito para el LLM
     return { 
-        activeProjectId: projectId,
+        activeClientId: clientId,
+        activeEstimationId: estimationId,
         messages: [
-            new SystemMessage(`SYSTEM UPDATE: The ACTIVE PROJECT ID is "${projectId}". Use this UUID for all DB tools.`)
+            new SystemMessage(`SYSTEM UPDATE: The ACTIVE ESTIMATION ID is "${estimationId}". Use this UUID for 'add_quote_item'.`)
         ]
     };
 }
@@ -76,4 +85,4 @@ const costEngineerWorkflow = createReactAgent({
   stateModifier: SYSTEM_PROMPT, // Volvemos al prompt estático, el ID viene en los mensajes
 });
 
-export { costEngineerWorkflow, ensureProjectNode };
+export { costEngineerWorkflow, ensureEstimationNode };

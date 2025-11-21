@@ -1,191 +1,169 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 export interface Database {
   public: {
     Tables: {
-      resources: {
+      companies: {
         Row: {
-          id: number;
-          name: string;
-          unit: string;
-          cost_per_unit: number;
-        };
+          id: string // uuid
+          name: string | null
+          email: string | null
+          phone: string | null
+          color_primary: string | null
+        }
         Insert: {
-          id?: number;
-          name: string;
-          unit: string;
-          cost_per_unit: number;
-        };
+          id: string
+          name?: string | null
+          email?: string | null
+          phone?: string | null
+          color_primary?: string | null
+        }
         Update: {
-          id?: number;
-          name?: string;
-          unit?: string;
-          cost_per_unit?: number;
-        };
-        Relationships: [];
-      };
-      assemblies: {
+          id?: string
+          name?: string | null
+          email?: string | null
+          phone?: string | null
+          color_primary?: string | null
+        }
+      }
+      clients: {
         Row: {
-          id: number;
-          code: string;
-          description: string;
-          unit: string;
-        };
+          id: string // uuid
+          company_id: string | null
+          name: string | null
+          email: string | null
+          phone: string | null
+        }
         Insert: {
-          id?: number;
-          code: string;
-          description: string;
-          unit: string;
-        };
+          id?: string // default uuid_generate_v4()
+          company_id?: string | null
+          name?: string | null
+          email?: string | null
+          phone?: string | null
+        }
         Update: {
-          id?: number;
-          code?: string;
-          description?: string;
-          unit?: string;
-        };
-        Relationships: [];
-      };
-      assembly_resources: {
+          id?: string
+          company_id?: string | null
+          name?: string | null
+          email?: string | null
+          phone?: string | null
+        }
+      }
+      item_categories: {
         Row: {
-          id: number;
-          assembly_id: number;
-          resource_id: number;
-          quantity: number;
-        };
+          id: number
+          company_id: string | null
+          name: string | null
+          code: string | null
+        }
         Insert: {
-          id?: number;
-          assembly_id: number;
-          resource_id: number;
-          quantity: number;
-        };
+          id?: number
+          company_id?: string | null
+          name?: string | null
+          code?: string | null
+        }
         Update: {
-          id?: number;
-          assembly_id?: number;
-          resource_id?: number;
-          quantity?: number;
-        };
-        Relationships: [];
-      };
-      projects: {
+          id?: number
+          company_id?: string | null
+          name?: string | null
+          code?: string | null
+        }
+      }
+      items: {
         Row: {
-          id: string; // UUID
-          name: string | null;
-          status: string;
-          user_phone: string | null;
-          created_at: string;
-        };
+          id: number // bigserial (handled as number for JS safety, technically string in some drivers)
+          company_id: string | null
+          name: string | null
+          unit: string | null // 'SF', 'LF', 'EA'
+          unit_cost: number | null // numeric(12,2)
+          category_id: number | null
+        }
         Insert: {
-          id?: string;
-          name?: string | null;
-          status: string;
-          user_phone?: string | null;
-          created_at?: string;
-        };
+          id?: number
+          company_id?: string | null
+          name?: string | null
+          unit?: string | null
+          unit_cost?: number | null
+          category_id?: number | null
+        }
         Update: {
-          id?: string;
-          name?: string | null;
-          status?: string;
-          user_phone?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      project_items: {
+          id?: number
+          company_id?: string | null
+          name?: string | null
+          unit?: string | null
+          unit_cost?: number | null
+          category_id?: number | null
+        }
+      }
+      estimations: {
         Row: {
-          id: number;
-          project_id: string;
-          assembly_id: number;
-          quantity: number;
-          calculated_cost: number | null;
-        };
+          id: string // uuid (The "Cart ID")
+          client_id: string | null
+          sequential_number: number // serial
+          status: string | null // 'draft', 'sent', 'approved'
+          net_total: number | null // numeric(12,2)
+          items_summary: Json | null // cache visual
+        }
         Insert: {
-          id?: number;
-          project_id: string;
-          assembly_id: number;
-          quantity: number;
-          calculated_cost?: number | null;
-        };
+          id?: string
+          client_id?: string | null
+          sequential_number?: number
+          status?: string | null
+          net_total?: number | null
+          items_summary?: Json | null
+        }
         Update: {
-          id?: number;
-          project_id?: string;
-          assembly_id?: number;
-          quantity?: number;
-          calculated_cost?: number | null;
-        };
-        Relationships: [];
-      };
-      chat_history: {
+          id?: string
+          client_id?: string | null
+          sequential_number?: number
+          status?: string | null
+          net_total?: number | null
+          items_summary?: Json | null
+        }
+      }
+      estimation_items: {
         Row: {
-          id: number;
-          created_at: string;
-          client_number: string;
-          client_name: string | null;
-          chat_on: boolean;
-          chat_status: 'open' | 'closed' | 'pending';
-          agent_name: string;
-          origin: string | null;
-        };
+          id: number // bigserial
+          estimation_id: string | null // FK -> estimations
+          item_id: number | null // FK -> items
+          description: string | null
+          quantity: number | null // numeric(12,3)
+          unit: string | null
+          unit_cost: number | null // Precio congelado
+          line_total: number | null
+        }
         Insert: {
-          id?: number;
-          created_at?: string;
-          client_number: string;
-          client_name?: string | null;
-          chat_on?: boolean;
-          chat_status?: 'open' | 'closed' | 'pending';
-          agent_name: string;
-          origin?: string | null;
-        };
+          id?: number
+          estimation_id?: string | null
+          item_id?: number | null
+          description?: string | null
+          quantity?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+          line_total?: number | null
+        }
         Update: {
-          id?: number;
-          created_at?: string;
-          client_number?: string;
-          client_name?: string | null;
-          chat_on?: boolean;
-          chat_status?: 'open' | 'closed' | 'pending';
-          agent_name?: string;
-          origin?: string | null;
-        };
-        Relationships: [];
-      };
-      messages: {
-        Row: {
-          id: number;
-          conversation_id: number;
-          sender: 'user' | 'assistant' | 'system';
-          message: string;
-          type: 'text' | 'image' | 'document' | 'audio';
-          twilio_sid: string | null;
-          status: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: number;
-          conversation_id: number;
-          sender: 'user' | 'assistant' | 'system';
-          message: string;
-          type?: 'text' | 'image' | 'document' | 'audio';
-          twilio_sid?: string | null;
-          status?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: number;
-          conversation_id?: number;
-          sender?: 'user' | 'assistant' | 'system';
-          message?: string;
-          type?: 'text' | 'image' | 'document' | 'audio';
-          twilio_sid?: string | null;
-          status?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-    };
-    Views: {};
-    Functions: {};
-    Enums: {};
-    CompositeTypes: {};
-  };
+          id?: number
+          estimation_id?: string | null
+          item_id?: number | null
+          description?: string | null
+          quantity?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+          line_total?: number | null
+        }
+      }
+    }
+  }
 }
 
-// Tipos auxiliares para uso en el código
-export type ChatHistory = Database['public']['Tables']['chat_history']['Row'];
-export type Message = Database['public']['Tables']['messages']['Row'];
+// Helper Types for clean imports
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+export type Insert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert']
+export type Update<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
