@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       companies: {
@@ -14,22 +14,46 @@ export interface Database {
           id: string // uuid
           name: string | null
           email: string | null
+          address: string | null
           phone: string | null
+          website: string | null
+          principal_fullname: string | null
+          secondary_fullname: string | null
           color_primary: string | null
+          color_secondary: string | null
+          logo_url: string | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id: string
           name?: string | null
           email?: string | null
+          address?: string | null
           phone?: string | null
+          website?: string | null
+          principal_fullname?: string | null
+          secondary_fullname?: string | null
           color_primary?: string | null
+          color_secondary?: string | null
+          logo_url?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
           name?: string | null
           email?: string | null
+          address?: string | null
           phone?: string | null
+          website?: string | null
+          principal_fullname?: string | null
+          secondary_fullname?: string | null
           color_primary?: string | null
+          color_secondary?: string | null
+          logo_url?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
       clients: {
@@ -38,21 +62,39 @@ export interface Database {
           company_id: string | null
           name: string | null
           email: string | null
+          address: string | null
           phone: string | null
+          website: string | null
+          principal_fullname: string | null
+          secondary_fullname: string | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string // default uuid_generate_v4()
           company_id?: string | null
           name?: string | null
           email?: string | null
+          address?: string | null
           phone?: string | null
+          website?: string | null
+          principal_fullname?: string | null
+          secondary_fullname?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
           company_id?: string | null
           name?: string | null
           email?: string | null
+          address?: string | null
           phone?: string | null
+          website?: string | null
+          principal_fullname?: string | null
+          secondary_fullname?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
       item_categories: {
@@ -159,6 +201,160 @@ export interface Database {
           line_total?: number | null
         }
       }
+      chat_history: {
+        Row: {
+          id: number // bigint
+          created_at: string // timestamp with time zone
+          client_number: string
+          messages_backup: Json | null
+          audio: boolean | null
+          client_name: string | null
+          chat_on: boolean | null
+          chat_status: string | null
+          agent_name: string | null
+          nit: string | null
+          notes: string | null
+          email: string | null
+          company: string | null
+          position: string | null
+          category: string | null
+          classification: string | null
+          credit: string | null
+          address: string | null
+          city: string | null
+          notified_no_reply: boolean | null
+          notified_out_of_hours: boolean | null
+          notified_out_afternoon: boolean | null
+          origin: string | null
+          is_archived: boolean | null
+          advisor_id: string | null // uuid
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          client_number: string
+          messages_backup?: Json | null
+          audio?: boolean | null
+          client_name?: string | null
+          chat_on?: boolean | null
+          chat_status?: string | null
+          agent_name?: string | null
+          nit?: string | null
+          notes?: string | null
+          email?: string | null
+          company?: string | null
+          position?: string | null
+          category?: string | null
+          classification?: string | null
+          credit?: string | null
+          address?: string | null
+          city?: string | null
+          notified_no_reply?: boolean | null
+          notified_out_of_hours?: boolean | null
+          notified_out_afternoon?: boolean | null
+          origin?: string | null
+          is_archived?: boolean | null
+          advisor_id?: string | null
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          client_number?: string
+          messages_backup?: Json | null
+          audio?: boolean | null
+          client_name?: string | null
+          chat_on?: boolean | null
+          chat_status?: string | null
+          agent_name?: string | null
+          nit?: string | null
+          notes?: string | null
+          email?: string | null
+          company?: string | null
+          position?: string | null
+          category?: string | null
+          classification?: string | null
+          credit?: string | null
+          address?: string | null
+          city?: string | null
+          notified_no_reply?: boolean | null
+          notified_out_of_hours?: boolean | null
+          notified_out_afternoon?: boolean | null
+          origin?: string | null
+          is_archived?: boolean | null
+          advisor_id?: string | null
+        }
+      }
+      messages: {
+        Row: {
+          id: number // bigint
+          conversation_id: number | null // bigint
+          sender: string
+          message: string | null
+          url: string | null
+          type: string | null
+          status: string | null
+          created_at: string | null
+          read_at: string | null
+          twilio_sid: string | null
+          file_name: string | null
+          delivered_at: string | null
+          sent_at: string | null
+          failed_at: string | null
+          error_code: string | null
+          error_message: string | null
+          advisor_id: string | null // uuid
+        }
+        Insert: {
+          id?: number
+          conversation_id?: number | null
+          sender: string
+          message?: string | null
+          url?: string | null
+          type?: string | null
+          status?: string | null
+          created_at?: string | null
+          read_at?: string | null
+          twilio_sid?: string | null
+          file_name?: string | null
+          delivered_at?: string | null
+          sent_at?: string | null
+          failed_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          advisor_id?: string | null
+        }
+        Update: {
+          id?: number
+          conversation_id?: number | null
+          sender?: string
+          message?: string | null
+          url?: string | null
+          type?: string | null
+          status?: string | null
+          created_at?: string | null
+          read_at?: string | null
+          twilio_sid?: string | null
+          file_name?: string | null
+          delivered_at?: string | null
+          sent_at?: string | null
+          failed_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          advisor_id?: string | null
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

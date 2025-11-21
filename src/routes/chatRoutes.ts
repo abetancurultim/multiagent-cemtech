@@ -9,7 +9,7 @@ const router = Router();
 const chatService = new ChatHistoryService();
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-router.post('/cemtech/webhook', async (req: Request, res: Response) => {
+router.post('/cemtech/receive-message', async (req: Request, res: Response) => {
   const twiml = new twilio.twiml.MessagingResponse();
 
   try {
@@ -43,7 +43,8 @@ router.post('/cemtech/webhook', async (req: Request, res: Response) => {
         sender: 'user',
         message: contentToSave,
         twilioSid: MessageSid,
-        type: MediaUrl0 ? (MediaContentType0.includes('image') ? 'image' : 'document') : 'text'
+        type: MediaUrl0 ? (MediaContentType0.includes('image') ? 'image' : 'document') : 'text',
+        url: firebaseUrl || undefined
       });
 
       // Respondemos vacío a Twilio
@@ -86,7 +87,8 @@ router.post('/cemtech/webhook', async (req: Request, res: Response) => {
         sender: 'user',
         message: finalUserMessage,
         twilioSid: MessageSid,
-        type: messageType
+        type: messageType,
+        url: firebaseUrl || undefined
     });
 
     // 6. Invocar al Grafo (Supervisor)
@@ -108,13 +110,19 @@ router.post('/cemtech/webhook', async (req: Request, res: Response) => {
     const botResponse = lastMessage.content as string;
 
     // 7. Enviar respuesta a Twilio
-    // Nota: Aquí podrías agregar lógica de TTS (ElevenLabs) si quisieras responder con audio
-    // como en tu ejemplo original.
+    // Aseguramos que los números tengan el formato correcto 'whatsapp:+...'
+    const sendTo = From.startsWith('whatsapp:') ? From : `whatsapp:${From}`;
+    const sendFrom = To.startsWith('whatsapp:') ? To : `whatsapp:${To}`;
+
+    console.log(`📤 Enviando a Twilio: De ${sendFrom} para ${sendTo}`);
+
     const sentMsg = await twilioClient.messages.create({
         body: botResponse,
-        from: To,
-        to: From
+        from: sendFrom,
+        to: sendTo
     });
+
+    console.log(`✅ Twilio aceptó el mensaje. SID: ${sentMsg.sid} | Status: ${sentMsg.status}`);
 
     // 8. Guardar respuesta del Bot
     await chatService.saveMessage({

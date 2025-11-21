@@ -1,12 +1,12 @@
 import { supabase } from '../config/supabase';
-import { ChatHistory, Message } from '../types/db';
+import { Tables } from '../types/db';
 
 export class ChatHistoryService {
 
   /**
    * Obtiene una conversación existente o crea una nueva basada en el número de teléfono (WhatsApp ID)
    */
-  async getOrCreateConversation(clientNumber: string, clientName?: string): Promise<ChatHistory> {
+  async getOrCreateConversation(clientNumber: string, clientName?: string): Promise<Tables<'chat_history'>> {
     // 1. Buscar existente
     const { data: existing, error: findError } = await supabase
       .from('chat_history')
@@ -46,7 +46,8 @@ export class ChatHistoryService {
     message: string;
     twilioSid?: string;
     type?: 'text' | 'image' | 'document' | 'audio';
-  }): Promise<Message | null> {
+    url?: string;
+  }): Promise<Tables<'messages'> | null> {
     
     const { data, error } = await supabase
       .from('messages')
@@ -56,7 +57,8 @@ export class ChatHistoryService {
         message: params.message,
         twilio_sid: params.twilioSid,
         type: params.type || 'text',
-        status: params.sender === 'user' ? 'received' : 'sent'
+        status: params.sender === 'user' ? 'received' : 'sent',
+        url: params.url
       })
       .select()
       .single();

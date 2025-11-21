@@ -1,5 +1,5 @@
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { StateGraph, END } from "@langchain/langgraph";
+import { StateGraph, END, MemorySaver } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 import { AgentState } from "./agents/agentState";
 import { costEngineerWorkflow, ensureEstimationNode } from "./agents/costEngineer";
@@ -8,6 +8,9 @@ import { costEngineerWorkflow, ensureEstimationNode } from "./agents/costEnginee
  * 🧠 EL SUPERVISOR (ROUTER)
  * Versión Final: Saludo estandarizado para evitar errores de generación.
  */
+
+// Checkpointer para memoria nativa de LangGraph (In-Memory)
+const checkpointer = new MemorySaver();
 
 const supervisorModel = new ChatOpenAI({ 
     model: "gpt-4o", 
@@ -27,30 +30,34 @@ IF the user mentions:
 - "price", "quote", "estimate", "cost", "how much"
 - Specific items: "sidewalk", "concrete", "curb", "pad", "ramp", "bollard"
 - Actions: "add item", "calculate", "do it", "run numbers"
+- **Client Info**: "email", "phone", "contact", "address", "name is", "number is" (This is CRITICAL for creating new clients)
 -> RETURN JSON: { "next": "cost_engineer" }
 
 **CASE 2: GENERAL CHAT**
-IF the user says "Hello", "Hi", "Who are you?", "Thanks", or "Help":
--> RETURN JSON: { "next": "FINISH", "reply": "Hello! I am Cemtech AI, your automated cost estimator. I can help you quote sidewalks, curbs, pads, and more. How can I help you today?" }
+IF the user says "Hello", "Hi", "Who are you?", "Thanks", "Help", or engages in casual conversation (like telling their name):
+-> RETURN JSON: { "next": "FINISH", "reply": "YOUR_CONTEXTUAL_RESPONSE_HERE" }
+   - Example: If user says "My name is Alex", reply "Nice to meet you Alex! How can I help you with your construction quotes today?"
+   - Example: If user says "What is my name?", reply based on the conversation history.
 
 **IMPORTANT:**
 - You MUST return ONLY a valid JSON object.
-- If the request implies ANY calculation or database lookup, route to 'cost_engineer'.
+- If the request implies ANY calculation, database lookup, OR providing client details, route to 'cost_engineer'.
+- Use the conversation history to provide natural, contextual responses in CASE 2.
 `;
 
 // Nodo del Supervisor
 async function supervisorNode(state: typeof AgentState.State) {
   const messages = state.messages;
   
-  // Buscamos el último mensaje HUMANO para ignorar inyecciones de sistema
-  const lastHumanMessage = messages.slice().reverse().find(m => m._getType() === "human");
-  const messageToAnalyze = lastHumanMessage || messages[messages.length - 1];
+  // Le pasamos el historial reciente para que tenga contexto (últimos 6 mensajes)
+  // Esto permite que entienda referencias como "mi nombre es..." o preguntas de seguimiento
+  const recentHistory = messages.slice(-6);
 
-  console.log(`🧐 Supervisor analyzing: "${messageToAnalyze.content.slice(0, 50)}..."`);
+  console.log(`🧐 Supervisor analyzing history (${recentHistory.length} msgs)...`);
 
   const response = await supervisorModel.invoke([
     new SystemMessage(SUPERVISOR_PROMPT),
-    messageToAnalyze
+    ...recentHistory
   ]);
 
   let decision;
@@ -100,4 +107,4 @@ const workflow = new StateGraph(AgentState)
 
   .addEdge("cost_engineer", END);
 
-export const graph = workflow.compile();
+export const graph = workflow.compile({ checkpointer });
