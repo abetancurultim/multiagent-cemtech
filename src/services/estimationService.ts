@@ -2,9 +2,6 @@ import { supabase } from "../config/supabase";
 import { Tables, Insert } from "../types/db";
 
 export const estimationService = {
-  /**
-   * Busca una cotización en estado 'draft' para un cliente específico
-   */
   async findDraftEstimation(clientId: string): Promise<Tables<"estimations"> | null> {
     const { data, error } = await supabase
       .from("estimations")
@@ -15,18 +12,14 @@ export const estimationService = {
       .limit(1)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found"
+    if (error && error.code !== 'PGRST116') {
       console.error("Error finding draft estimation:", error);
     }
 
     return data || null;
   },
 
-  /**
-   * Crea una nueva cotización (cabecera)
-   */
   async createEstimation(clientId: string, notes?: string): Promise<Tables<"estimations">> {
-    // Obtener company_id
     const { data: company } = await supabase.from("companies").select("id").limit(1).single();
     
     const newEstimation: Insert<"estimations"> = {
@@ -51,9 +44,6 @@ export const estimationService = {
     return data;
   },
 
-  /**
-   * Agrega un item a la cotización
-   */
   async addItemToEstimation(
     estimationId: string, 
     itemData: { 
@@ -90,15 +80,11 @@ export const estimationService = {
       throw new Error(`Error adding item: ${error.message}`);
     }
 
-    // Recalcular totales de la cotización (simple update)
     await this.recalculateEstimationTotals(estimationId);
 
     return data;
   },
 
-  /**
-   * Recalcula el total de la cotización sumando los items
-   */
   async recalculateEstimationTotals(estimationId: string): Promise<void> {
     const { data: items } = await supabase
       .from("estimation_items")
@@ -113,9 +99,6 @@ export const estimationService = {
       .eq("id", estimationId);
   },
 
-  /**
-   * Obtiene el detalle completo de una cotización
-   */
   async getEstimationDetails(estimationId: string) {
     const { data: estimation, error: estError } = await supabase
       .from("estimations")

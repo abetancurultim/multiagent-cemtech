@@ -24,7 +24,6 @@ app.options('*', cors());
 
 app.use('/', chatRoutes);
 
-// Inicia el servidor
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

@@ -4,7 +4,6 @@ import { llm } from "../config/llm";
 import { crmTools } from "../tools/crmTools"; 
 import { AgentState } from "./agentState";
 
-// 1. Definimos el Prompt Base
 const BASE_PROMPT = `You are the Cost Engineer at Cemtech.
 Your goal is to manage clients and create accurate quotes.
 
@@ -28,7 +27,6 @@ RULES:
 - Do not make up prices. Use the catalog.
 `;
 
-// 2. Creamos el Agente
 const costEngineerAgent = createReactAgent({
   llm,
   tools: crmTools,
@@ -38,11 +36,9 @@ const costEngineerAgent = createReactAgent({
   },
 });
 
-// 3. Nodo del Grafo
 export async function costEngineerNode(state: typeof AgentState.State) {
   let messages = state.messages;
 
-  // Inject context if available
   if (state.activeClientId) {
     messages = [
       new SystemMessage(`SYSTEM: Active Client ID: ${state.activeClientId}.`),
@@ -59,7 +55,6 @@ export async function costEngineerNode(state: typeof AgentState.State) {
   const result = await costEngineerAgent.invoke({ messages });
   const lastMessage = result.messages[result.messages.length - 1];
 
-  // Parse tool outputs to update state
   const newMessages = result.messages;
   let activeClientId = state.activeClientId;
   let activeEstimationId = state.activeEstimationId;
@@ -88,10 +83,8 @@ export async function costEngineerNode(state: typeof AgentState.State) {
   };
 }
 
-// Alias for compatibility with supervisor
 export const costEngineerWorkflow = costEngineerNode;
 
-// Placeholder for ensureEstimationNode if it was used before
 export const ensureEstimationNode = async (state: typeof AgentState.State) => {
     return {};
 };

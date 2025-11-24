@@ -4,12 +4,6 @@ import { ChatOpenAI } from "@langchain/openai";
 import { AgentState } from "./agents/agentState";
 import { costEngineerWorkflow, ensureEstimationNode } from "./agents/costEngineer";
 
-/**
- * 🧠 EL SUPERVISOR (ROUTER)
- * Versión Final: Saludo estandarizado para evitar errores de generación.
- */
-
-// Checkpointer para memoria nativa de LangGraph (In-Memory)
 const checkpointer = new MemorySaver();
 
 const supervisorModel = new ChatOpenAI({ 
@@ -45,12 +39,9 @@ IF the user says "Hello", "Hi", "Who are you?", "Thanks", "Help", or engages in 
 - Use the conversation history to provide natural, contextual responses in CASE 2.
 `;
 
-// Nodo del Supervisor
 async function supervisorNode(state: typeof AgentState.State) {
   const messages = state.messages;
   
-  // Le pasamos el historial reciente para que tenga contexto (últimos 6 mensajes)
-  // Esto permite que entienda referencias como "mi nombre es..." o preguntas de seguimiento
   const recentHistory = messages.slice(-6);
 
   console.log(`🧐 Supervisor analyzing history (${recentHistory.length} msgs)...`);
@@ -70,24 +61,22 @@ async function supervisorNode(state: typeof AgentState.State) {
     decision = JSON.parse(cleanJson);
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    console.log(`⚠️ JSON Parse Error: ${errorMessage}`);
-    // Ante la duda, asumir que es trabajo para el ingeniero
+    console.log(`JSON Parse Error: ${errorMessage}`);
     decision = { next: "cost_engineer" };
   }
 
   if (decision.next === "cost_engineer") {
-      console.log("🔀 Supervisor Decision: -> [Cost Engineer]");
+      console.log("Supervisor Decision: -> [Cost Engineer]");
       return { next: "cost_engineer" };
   }
 
-  console.log("🔀 Supervisor Decision: -> [Direct Reply]");
+  console.log("Supervisor Decision: -> [Direct Reply]");
   return { 
       next: "FINISH", 
       messages: [new HumanMessage(decision.reply || "I can help with concrete quotes.")] 
   };
 }
 
-// Construcción del Grafo Maestro
 const workflow = new StateGraph(AgentState)
   .addNode("ensure_estimation", ensureEstimationNode)
   .addNode("supervisor", supervisorNode)

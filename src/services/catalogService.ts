@@ -2,9 +2,6 @@ import { supabase } from "../config/supabase";
 import { Tables } from "../types/db";
 
 export const catalogService = {
-  /**
-   * Busca items en el catálogo por nombre o descripción
-   */
   async searchCatalogItems(query: string): Promise<Tables<"items">[]> {
     const { data, error } = await supabase
       .from("items")
@@ -21,9 +18,6 @@ export const catalogService = {
     return data || [];
   },
 
-  /**
-   * Obtiene todas las categorías
-   */
   async getCategories(): Promise<Tables<"item_categories">[]> {
     const { data, error } = await supabase
       .from("item_categories")

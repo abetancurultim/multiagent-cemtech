@@ -1,10 +1,7 @@
 import { supabase } from "../config/supabase";
 
-/**
- * Lógica Pura: Buscar Ítems
- */
 export async function searchItemsInDB(query: string): Promise<string> {
-  console.log(`🔍 [Function] Searching: ${query}`);
+  console.log(`[Function] Searching: ${query}`);
 
   const { data, error } = await supabase
     .from('items')
@@ -16,21 +13,17 @@ export async function searchItemsInDB(query: string): Promise<string> {
   if (!data || data.length === 0) return "No items found. Try 'sidewalk', 'curb', 'pad'.";
 
   return data.map((item: any) => 
-    `🆔 ID: ${item.id} | NAME: ${item.name} | UNIT: ${item.unit} | COST: $${item.unit_cost}`
+    `ID: ${item.id} | NAME: ${item.name} | UNIT: ${item.unit} | COST: $${item.unit_cost}`
   ).join('\n');
 }
 
-/**
- * Lógica Pura: Cotizar e Insertar
- */
 export async function calculateAndAddQuoteItem(
   estimationId: string, 
   itemId: number, 
   quantity: number
 ): Promise<string> {
-  console.log(`➕ [Function] Adding Item ID: ${itemId} x ${quantity} to Estimation: ${estimationId}`);
+  console.log(`[Function] Adding Item ID: ${itemId} x ${quantity} to Estimation: ${estimationId}`);
 
-  // 1. Obtener Item
   const { data: item, error: itemError } = await supabase
     .from('items')
     .select('name, unit, unit_cost')
@@ -42,7 +35,6 @@ export async function calculateAndAddQuoteItem(
   const unitCost = item.unit_cost || 0;
   const lineTotal = unitCost * quantity;
 
-  // 2. Guardar en estimation_items
   const { error: saveError } = await supabase
     .from('estimation_items')
     .insert({
@@ -57,5 +49,5 @@ export async function calculateAndAddQuoteItem(
 
   if (saveError) return `Error saving to Quote: ${saveError.message}`;
 
-  return `✅ SUCCESS: Added ${quantity} ${item.unit} of "${item.name}".\n   - Unit Cost: $${unitCost.toFixed(2)}\n   - Total Line: $${lineTotal.toFixed(2)}`;
+  return `SUCCESS: Added ${quantity} ${item.unit} of "${item.name}".\n   - Unit Cost: $${unitCost.toFixed(2)}\n   - Total Line: $${lineTotal.toFixed(2)}`;
 }

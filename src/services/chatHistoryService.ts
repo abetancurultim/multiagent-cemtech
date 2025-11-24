@@ -3,11 +3,7 @@ import { Tables } from '../types/db';
 
 export class ChatHistoryService {
 
-  /**
-   * Obtiene una conversación existente o crea una nueva basada en el número de teléfono (WhatsApp ID)
-   */
   async getOrCreateConversation(clientNumber: string, clientName?: string): Promise<Tables<'chat_history'>> {
-    // 1. Buscar existente
     const { data: existing, error: findError } = await supabase
       .from('chat_history')
       .select('*')
@@ -16,7 +12,6 @@ export class ChatHistoryService {
 
     if (existing) return existing;
 
-    // 2. Crear si no existe
     const { data: newChat, error: createError } = await supabase
       .from('chat_history')
       .insert({
@@ -37,12 +32,9 @@ export class ChatHistoryService {
     return newChat;
   }
 
-  /**
-   * Guarda un mensaje (entrante o saliente) en la base de datos
-   */
   async saveMessage(params: {
     conversationId: number;
-    sender: 'user' | 'assistant' | 'system'; // 'user' (cliente), 'assistant' (IA), o 'system'
+    sender: 'user' | 'assistant' | 'system'; 
     message: string;
     twilioSid?: string;
     type?: 'text' | 'image' | 'document' | 'audio';
@@ -70,15 +62,10 @@ export class ChatHistoryService {
     return data;
   }
 
-  /**
-   * Actualiza el estado de un mensaje (Webhook de Twilio Status)
-   */
   async updateMessageStatus(twilioSid: string, status: string) {
     await supabase
       .from('messages')
       .update({ status: status })
       .eq('twilio_sid', twilioSid);
-      
-    // Opcional: Guardar en message_status_history
   }
 }

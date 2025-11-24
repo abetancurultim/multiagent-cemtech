@@ -8,5 +8,4 @@ export const llm = new ChatOpenAI({
     model: "gpt-4o-mini",
     apiKey: process.env.OPENAI_API_KEY,
     maxTokens: 200,
-    // topP: 1,
   });

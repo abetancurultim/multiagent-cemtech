@@ -1,4 +1,3 @@
-// src/config/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
 import dotenv from "dotenv";
@@ -14,6 +13,5 @@ const firebaseConfig = {
   appId: process.env.FIREBASE_APP_ID,
 };
 
-// Inicializamos la app y exportamos el storage
 const app = initializeApp(firebaseConfig);
 export const storage = getStorage(app);

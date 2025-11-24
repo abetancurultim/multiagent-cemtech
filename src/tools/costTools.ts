@@ -7,13 +7,13 @@ import { Database } from "../types/db";
 type ItemRow = Database['public']['Tables']['items']['Row'];
 
 /**
- * 1. CREATE ESTIMATION (El Carrito)
+ * 1. CREATE ESTIMATION
  * Crea una nueva hoja de cotización para un cliente.
  */
 export const create_estimation = tool(
   async ({ client_id, title }) => {
     try {
-      // 1. Crear la cabecera
+      // 1. Crear la cabecera de la cotización
       const { data, error } = await (supabase
         .from("estimations") as any)
         .insert({
@@ -82,9 +82,8 @@ export const search_catalog = tool(
 );
 
 /**
- * 3. ADD ITEM LINE (Agregar al Carrito)
- * Inserta una línea en estimation_items. 
- * IMPORTANTE: Congela el precio (unit_cost) al momento de la inserción.
+ * 3. ADD ITEM LINE
+ * Inserta una línea en estimation_items.
  */
 export const add_item_line = tool(
   async ({ estimation_id, item_id, quantity, description_override }) => {
@@ -110,7 +109,7 @@ export const add_item_line = tool(
           description: description_override || itemData.name,
           quantity: quantity,
           unit: itemData.unit,
-          unit_cost: unitCost, // Precio congelado
+          unit_cost: unitCost,
           line_total: lineTotal
         });
 
@@ -134,7 +133,7 @@ export const add_item_line = tool(
 );
 
 /**
- * 4. GET ESTIMATION SUMMARY (Ver el Carrito)
+ * 4. GET ESTIMATION SUMMARY
  * Calcula el total sumando las líneas.
  */
 export const get_estimation_summary = tool(
@@ -157,7 +156,6 @@ export const get_estimation_summary = tool(
         return `- ${line.quantity} ${line.unit} x ${line.description}: $${t.toFixed(2)}`;
       });
 
-      // Actualizar el total en la cabecera (Sync)
       await (supabase
         .from("estimations") as any)
         .update({ net_total: total })
@@ -177,7 +175,7 @@ export const get_estimation_summary = tool(
   }
 );
 
-// Exportar lista para el Agente
+// Exportar herramientas para el Agente
 export const costTools = [
     create_estimation,
     search_catalog,

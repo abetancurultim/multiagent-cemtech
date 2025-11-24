@@ -2,9 +2,6 @@ import { supabase } from "../config/supabase";
 import { Tables, Insert } from "../types/db";
 
 export const crmService = {
-  /**
-   * Busca clientes por nombre (coincidencia parcial, case-insensitive)
-   */
   async findClientByName(name: string): Promise<Tables<"clients">[]> {
     const { data, error } = await supabase
       .from("clients")
@@ -20,11 +17,7 @@ export const crmService = {
     return data || [];
   },
 
-  /**
-   * Crea un nuevo cliente
-   */
   async createClient(clientData: Insert<"clients">): Promise<Tables<"clients">> {
-    // Primero intentamos obtener el company_id por defecto si no viene
     if (!clientData.company_id) {
       const { data: company } = await supabase.from("companies").select("id").limit(1).single();
       if (company) {
@@ -46,9 +39,6 @@ export const crmService = {
     return data;
   },
 
-  /**
-   * Obtiene un cliente por ID
-   */
   async getClientById(id: string): Promise<Tables<"clients"> | null> {
     const { data, error } = await supabase
       .from("clients")
