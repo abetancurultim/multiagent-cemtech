@@ -44,7 +44,7 @@ async function supervisorNode(state: typeof AgentState.State) {
   
   const recentHistory = messages.slice(-6);
 
-  console.log(`🧐 Supervisor analyzing history (${recentHistory.length} msgs)...`);
+  console.log(`Supervisor analyzing history (${recentHistory.length} msgs)...`);
 
   const response = await supervisorModel.invoke([
     new SystemMessage(SUPERVISOR_PROMPT),
