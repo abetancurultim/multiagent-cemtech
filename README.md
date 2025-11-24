@@ -125,7 +125,15 @@ TWILIO_AUTH_TOKEN="..."
 TWILIO_PHONE_NUMBER="whatsapp:+1..."
 ```
 
-### 4. Running the Server
+### 4. Firebase Service Account (Required for PDF Uploads)
+To enable backend operations like uploading generated PDFs, you must provide a Firebase Service Account Key.
+
+1.  Go to **Firebase Console** > **Project Settings** > **Service Accounts**.
+2.  Click **Generate new private key**.
+3.  Save the downloaded JSON file as `firebase_test.json` in the **root** of the project.
+4.  **Important:** Do not commit this file to Git (it should be in `.gitignore`).
+
+### 5. Running the Server
 
 **Development Mode:**
 ```bash
@@ -144,6 +152,63 @@ Expose your local server using Ngrok:
 ngrok http 3031
 ```
 Set the Twilio Webhook URL to: `https://your-ngrok-url.app/cemtech/receive-message`
+
+---
+
+## 📄 PDF Generation & Delivery
+
+The system can generate a formal estimation PDF and deliver it directly to the client via WhatsApp (media attachment). This involves three components:
+
+### 1. Service Account Requirement
+PDF upload uses Firebase Storage through `firebase-admin`. Ensure the service account file `firebase_test.json` exists at the project root (see section 4 above). This file is read in `storageService.ts` to initialize Admin SDK.
+
+### 2. Generation Flow
+1. Agent identifies or creates the client (`search_clients` / `lookup_or_create_client`).
+2. Agent ensures there is an active estimation (`manage_quote_context`).
+3. When user requests the PDF or quote is finalized, the agent calls tool `generate_estimation_pdf`.
+4. Tool steps:
+     - Fetch estimation + client + items from Supabase.
+     - Build PDF via `pdfmake` (`pdfService.generateEstimationPdf`).
+     - Upload buffer to Firebase Storage (`storageService.uploadPdfToFirebase`).
+     - Update `estimations.pdf_url` and `pdf_updated_at` in Supabase.
+     - Send WhatsApp message with the PDF as `mediaUrl` (handled by modified logic in `chatRoutes.ts`).
+
+### 3. Regeneration Logic
+If items or totals change after a PDF was generated, the agent prompt instructs it to regenerate to keep the document up to date.
+
+### 4. Key Files
+| File | Responsibility |
+|------|----------------|
+| `src/services/pdfService.ts` | Builds PDF buffer from Supabase data using `pdfmake`. |
+| `src/services/storageService.ts` | Uploads PDF to Firebase Storage (public URL). |
+| `src/services/whatsappService.ts` | Sends media messages (PDF link as attachment) via Twilio. |
+| `src/tools/pdfTools.ts` | LangChain tool `generate_estimation_pdf` orchestrating the entire flow. |
+| `src/routes/chatRoutes.ts` | Detects media URLs in agent output and sends them as WhatsApp attachments. |
+
+### 5. Fonts Requirement
+Place Roboto fonts under `./fonts/`:
+```
+fonts/
+    Roboto-Regular.ttf
+    Roboto-Medium.ttf
+    Roboto-Italic.ttf
+    Roboto-MediumItalic.ttf
+```
+
+### 6. Manual Invocation Example
+Inside an internal script or REPL:
+```ts
+import { generateEstimationPdf } from './src/tools/pdfTools';
+await generateEstimationPdf.invoke({ estimation_id: 'UUID-OF-ESTIMATION' });
+```
+
+### 7. Troubleshooting
+| Issue | Fix |
+|-------|-----|
+| `storage/missing-dependencies` | Run `npm install @google-cloud/storage`. |
+| Fonts not found | Verify `fonts/` directory exists at project root. |
+| WhatsApp sends only text | Ensure URL is public and regex in `chatRoutes.ts` matches it. |
+| 403 on upload | Check Firebase Storage rules or service account permissions. |
 
 ---
 

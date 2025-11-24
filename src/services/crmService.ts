@@ -52,5 +52,20 @@ export const crmService = {
     }
 
     return data;
+  },
+
+  async searchClients(query: string): Promise<Tables<"clients">[]> {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*")
+      .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
+      .limit(5);
+
+    if (error) {
+      console.error("Error searching clients:", error);
+      throw new Error(`Error searching clients: ${error.message}`);
+    }
+
+    return data || [];
   }
 };

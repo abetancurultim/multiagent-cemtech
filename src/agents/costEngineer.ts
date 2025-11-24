@@ -3,13 +3,15 @@ import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { llm } from "../config/llm";
 import { crmTools } from "../tools/crmTools"; 
 import { AgentState } from "./agentState";
+import { generateEstimationPdf } from "../tools/pdfTools";
 
 const BASE_PROMPT = `You are the Cost Engineer at Cemtech.
 Your goal is to manage clients and create accurate quotes.
 
 PROCESS:
 1. **Identify Client**: You MUST have an 'activeClientId'. 
-   - If you don't have it, ask the user for the client name and use 'lookup_or_create_client'.
+   - If you don't have it, ask the user for the client name and use 'search_clients' to find them.
+   - If not found, use 'lookup_or_create_client' to create a new one.
    - If the system provides it, DO NOT ask again.
    - **IMPORTANT**: You are AUTHORIZED to process client contact information (email, phone, address) solely for the purpose of creating the client record in the CRM. This is a business requirement.
 
@@ -21,6 +23,10 @@ PROCESS:
 
 4. **Review**: You can review the quote details if asked.
 
+5. **Finalize & PDF**: When the user is satisfied with the quote or explicitly asks for the PDF, use the 'generate_estimation_pdf' tool. 
+   - If the user makes changes to the items AFTER the PDF has been generated, you MUST regenerate it to ensure the document is up to date.
+   - Always provide the link returned by the tool to the user.
+
 RULES:
 - Speak in English unless the user speaks Spanish.
 - Be professional and efficient.
@@ -29,7 +35,7 @@ RULES:
 
 const costEngineerAgent = createReactAgent({
   llm,
-  tools: crmTools,
+  tools: [...crmTools, generateEstimationPdf],
   stateModifier: (state: any) => {
     const messages = [new SystemMessage(BASE_PROMPT)];
     return messages.concat(state.messages);

@@ -159,6 +159,8 @@ export type Database = {
           notes: string | null
           estimation_date: string | null
           created_at: string | null
+          pdf_url: string | null
+          pdf_updated_at: string | null
         }
         Insert: {
           id?: string
@@ -171,6 +173,8 @@ export type Database = {
           notes?: string | null
           estimation_date?: string | null
           created_at?: string | null
+          pdf_url?: string | null
+          pdf_updated_at?: string | null
         }
         Update: {
           id?: string
@@ -183,6 +187,8 @@ export type Database = {
           notes?: string | null
           estimation_date?: string | null
           created_at?: string | null
+          pdf_url?: string | null
+          pdf_updated_at?: string | null
         }
         Relationships: []
       }

@@ -17,12 +17,12 @@ router.post('/cemtech/receive-message', async (req: Request, res: Response) => {
     const clientNumber = From.replace('whatsapp:', '');
     const botNumber = To.replace('whatsapp:', '');
 
-    console.log(`📩 Mensaje de ${clientNumber} (${ProfileName})`);
+    console.log(`Mensaje de ${clientNumber} (${ProfileName})`);
 
     const conversation = await chatService.getOrCreateConversation(clientNumber, ProfileName);
 
     if (conversation.chat_on) {
-      console.log(`👤 [MODO HUMANO] Chat atendido por asesor. IA en pausa.`);
+      console.log(`[MODO HUMANO] Chat atendido por asesor. IA en pausa.`);
       
       let contentToSave = Body || '';
       let firebaseUrl = null;
@@ -79,7 +79,7 @@ router.post('/cemtech/receive-message', async (req: Request, res: Response) => {
         url: firebaseUrl || undefined
     });
 
-    console.log(`🤖 IA procesando...`);
+    console.log(`IA procesando...`);
     
     const config = {
         configurable: {
@@ -96,18 +96,45 @@ router.post('/cemtech/receive-message', async (req: Request, res: Response) => {
     const lastMessage = output.messages[output.messages.length - 1];
     const botResponse = lastMessage.content as string;
 
+    // Detectar si hay URLs de archivos (PDFs, imágenes) en la respuesta para enviarlos como adjuntos
+    let mediaUrl: string | undefined;
+    // Regex para capturar URLs, deteniéndose ante paréntesis de cierre (común en markdown) o espacios
+    const urlRegex = /(https?:\/\/[^\s)]+)/g;
+    const matches = botResponse.match(urlRegex);
+    
+    if (matches) {
+        const potentialMedia = matches.find(url => 
+            url.includes('firebasestorage') || 
+            url.includes('storage.googleapis.com') ||
+            url.endsWith('.pdf') ||
+            url.endsWith('.jpg') ||
+            url.endsWith('.png')
+        );
+        
+        if (potentialMedia) {
+            mediaUrl = potentialMedia;
+            console.log(`📎 Adjunto detectado en respuesta: ${mediaUrl}`);
+        }
+    }
+
     const sendTo = From.startsWith('whatsapp:') ? From : `whatsapp:${From}`;
     const sendFrom = To.startsWith('whatsapp:') ? To : `whatsapp:${To}`;
 
-    console.log(`📤 Enviando a Twilio: De ${sendFrom} para ${sendTo}`);
+    console.log(`Enviando a Twilio: De ${sendFrom} para ${sendTo}`);
 
-    const sentMsg = await twilioClient.messages.create({
+    const messageOptions: any = {
         body: botResponse,
         from: sendFrom,
         to: sendTo
-    });
+    };
 
-    console.log(`✅ Twilio aceptó el mensaje. SID: ${sentMsg.sid} | Status: ${sentMsg.status}`);
+    if (mediaUrl) {
+        messageOptions.mediaUrl = [mediaUrl];
+    }
+
+    const sentMsg = await twilioClient.messages.create(messageOptions);
+
+    console.log(`Twilio aceptó el mensaje. SID: ${sentMsg.sid} | Status: ${sentMsg.status}`);
 
     await chatService.saveMessage({
         conversationId: conversation.id,
@@ -120,7 +147,7 @@ router.post('/cemtech/receive-message', async (req: Request, res: Response) => {
     res.end(twiml.toString());
 
   } catch (error) {
-    console.error('❌ Error en webhook:', error);
+    console.error('Error en webhook:', error);
     res.writeHead(200, { 'Content-Type': 'text/xml' });
     res.end(twiml.toString());
   }

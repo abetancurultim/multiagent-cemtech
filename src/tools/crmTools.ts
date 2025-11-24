@@ -157,8 +157,40 @@ export const searchAndAddItemTool = tool(
   }
 );
 
+/**
+ * Tool to search for clients by name or email.
+ */
+export const searchClients = tool(
+  async ({ query }) => {
+    try {
+      const clients = await crmService.searchClients(query);
+      
+      if (clients.length === 0) {
+        return "No clients found matching that name or email.";
+      }
+
+      return JSON.stringify(clients.map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone
+      })));
+    } catch (error: any) {
+      return `Error searching clients: ${error.message}`;
+    }
+  },
+  {
+    name: "search_clients",
+    description: "Search for a client by name or email. Use this when the user mentions a client name (e.g., 'Peachtree') but you don't have their ID.",
+    schema: z.object({
+      query: z.string().describe("The name or email fragment to search for"),
+    }),
+  }
+);
+
 export const crmTools = [
   lookupOrCreateClientTool,
   manageQuoteContextTool,
-  searchAndAddItemTool
+  searchAndAddItemTool,
+  searchClients
 ];
