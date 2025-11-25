@@ -212,6 +212,96 @@ await generateEstimationPdf.invoke({ estimation_id: 'UUID-OF-ESTIMATION' });
 
 ---
 
+## 💬 Example Conversation Flow
+
+Below is a real-world example demonstrating how the contractor uses the system to create quotes for their clients through WhatsApp, from initial contact to PDF generation:
+
+### 📱 Sample Interaction
+
+**Contractor:** Hi, I need to start a new estimate for a client named "Peachtree Builders".
+
+**AI (Cost Engineer):** Could you please provide the email address and phone number for "Peachtree Builders"? This information is necessary to create the client record in our system.
+
+**Contractor:** peachtree@builders.com and the phone number is 4049876543
+
+**AI (Cost Engineer):** I have successfully created a new client record for "Peachtree Builders" and initiated a new draft quote.
+
+The quote ID is **#5** and is currently in draft status.
+
+What items would you like to add to this quote? If you're looking for concrete, please specify the quantity and unit.
+
+**Contractor:** Add 800 SF of 4in Concrete Sidewalk
+
+**AI (Cost Engineer):** I have successfully added **800 SF of 4in Concrete Sidewalk** to the quote.
+
+• **Total Cost**: $10,000
+
+If you need to add more items or review the quote details, please let me know!
+
+**Contractor:** Add 10 hours of Demolition Labor
+
+**AI (Cost Engineer):** I have successfully added **10 hours of Demolition Labor** to the quote.
+
+• **Total Cost for Demolition**: $450
+
+If you need to add more items or review the quote details, please let me know!
+
+**Contractor:** Show me the summary of the quote.
+
+**AI (Cost Engineer):** Here's the summary of the current quote for "Peachtree Builders":
+
+1. **4in Concrete Sidewalk**
+   - Quantity: 800 SF
+   - Total Cost: $10,000
+
+2. **Demolition Labor**
+   - Quantity: 10 hours
+   - Total Cost: $450
+
+**Total Estimated Cost**: $10,450
+
+If you need any further modifications or additional items, please let me know!
+
+**Contractor:** Generate the PDF for this quote.
+
+**AI (Cost Engineer):** Perfect. I'm generating the quote in PDF format. I'll send it to you in just a moment...
+
+*(The system generates the PDF, uploads it to Firebase Storage, updates the database, and sends the document as a WhatsApp attachment)*
+
+**Contractor:** *(Receives the PDF attachment with Cemtech logo, itemized breakdown by category, subtotals, and total)*
+
+**AI (Cost Engineer):** I've sent you the formal quote document. The PDF includes all project details for "Peachtree Builders". Is there anything else I can help you with?
+
+**Contractor:** No, that's perfect. Thank you!
+
+**AI (Supervisor):** You're welcome! If you need to adjust the quote or create a new one, feel free to reach out. Have a great day! 🏗️
+
+---
+
+### 🔍 What Happened Behind the Scenes?
+
+1. **Client Recognition:** System searched for "Peachtree Builders", didn't find it, requested contact details
+2. **Client Creation:** New record created in `clients` table with provided email and phone
+3. **Agent Routing:** Supervisor detected quoting intent → routed to Cost Engineer
+4. **Quote Management:** Cost Engineer created new estimation (#5) linked to client in `estimations` table
+5. **Catalog Search:** Each item was looked up in the `items` table using fuzzy matching:
+   - "4in Concrete Sidewalk" → Found exact match ($12.50/SF)
+   - "Demolition Labor" → Found match ($45.00/HR)
+6. **Real-time Calculations:** Quantities × unit prices calculated automatically:
+   - 800 SF × $12.50 = $10,000
+   - 10 HR × $45.00 = $450
+   - Total: $10,450
+7. **Database Persistence:** All items saved to `estimation_items` table with frozen prices
+8. **PDF Generation:**
+   * Cost Engineer invoked `generate_estimation_pdf` tool
+   * `pdfService` fetched data from Supabase and built PDF with `pdfmake`
+   * `storageService` uploaded PDF to Firebase Storage (public URL)
+   * Public URL saved to `estimations.pdf_url` and `pdf_updated_at` timestamp updated
+9. **WhatsApp Delivery:** Twilio sent the PDF as media attachment to the contractor's WhatsApp
+10. **State Management:** `MemorySaver` checkpointer maintained conversation context throughout entire flow
+
+---
+
 ## 💾 Database Schema (Supabase)
 
 Key tables required for operation:

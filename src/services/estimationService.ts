@@ -19,6 +19,21 @@ export const estimationService = {
     return data || null;
   },
 
+  async countDraftEstimations(clientId: string): Promise<number> {
+    const { data, error, count } = await supabase
+      .from("estimations")
+      .select("id", { count: 'exact', head: false })
+      .eq("client_id", clientId)
+      .eq("status", "draft");
+
+    if (error) {
+      console.error("Error counting draft estimations:", error);
+      return 0;
+    }
+
+    return count || 0;
+  },
+
   async createEstimation(clientId: string, notes?: string): Promise<Tables<"estimations">> {
     const { data: company } = await supabase.from("companies").select("id").limit(1).single();
     
@@ -112,5 +127,34 @@ export const estimationService = {
 
     if (estError) throw estError;
     return estimation;
+  },
+
+  async getAllEstimationsForClient(clientId: string): Promise<Tables<"estimations">[]> {
+    const { data, error } = await supabase
+      .from("estimations")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching estimations:", error);
+      throw new Error(`Error fetching estimations: ${error.message}`);
+    }
+
+    return data || [];
+  },
+
+  async getEstimationById(estimationId: string): Promise<Tables<"estimations"> | null> {
+    const { data, error } = await supabase
+      .from("estimations")
+      .select("*")
+      .eq("id", estimationId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error("Error finding estimation:", error);
+    }
+
+    return data || null;
   }
 };
